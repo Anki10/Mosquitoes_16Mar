@@ -1,0 +1,240 @@
+//buildscript {
+//    repositories {
+//        maven { url 'https://maven.fabric.io/public' }
+//    }
+//
+//    dependencies {
+//        classpath 'io.fabric.tools:gradle:1.+'
+//    }
+//}
+//apply plugin: 'io.fabric'
+//repositories {
+//    maven { url 'https://maven.fabric.io/public' }
+//}
+
+
+
+apply plugin: 'com.android.application'
+
+/*apply plugin: 'io.fabric'
+
+repositories {
+    maven { url 'https://maven.fabric.io/public' }
+}*/
+
+// Get the date of build
+def getDateOfBuild = { -> // ISO 8601 time format
+//    return new Date().format("dd-MM-yyyy'-'HH'h'mm'm'").toString().trim()
+    return new Date().format("dd-MM-yyyy").toString().trim()
+}
+
+android {
+    compileSdkVersion project.ext.compileSdkVersion
+    buildToolsVersion project.ext.buildToolsVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+
+    defaultConfig {
+        applicationId "com.agreeya.homecredit.spm"
+        minSdkVersion project.ext.minSdkVersion
+        targetSdkVersion project.ext.targetSdkVersion
+
+        vectorDrawables.useSupportLibrary = true
+
+        versionCode project.ext.versionCode
+        versionName project.ext.versionName
+        //project id for GCM
+        resValue "string", "GCM_SENDER_ID", "170576491215"
+        resValue "string", "ANALYTICS_ID", "UA-66439289-3"
+        resValue "integer", "db_version", "$project.ext.dbVersion"
+        resValue "string", "db_name", "hcspm_database.db"
+
+        multiDexEnabled true
+        //if using gradle v2.0+
+        //vectorDrawables.useSupportLibrary = true
+        //else
+        // Stop the Gradle plugin’s automatic rasterization of vectors
+        //generatedDensities = []
+    }
+    // Flag to tell aapt to keep the attribute ids around
+    aaptOptions {
+        //not required if using gradle v2.0
+        //additionalParameters "--no-version-vectors"
+    }
+    lintOptions {
+            checkReleaseBuilds false
+            // Or, if you prefer, you can continue to check for errors in release builds,
+            // but continue the build even when errors are found:
+            abortOnError false
+
+    }
+
+    signingConfigs {
+        playStoreConfig
+        config {
+            keyAlias 'key0'
+            keyPassword 'anovatech'
+            storeFile file('D:/FSMosquito_key_path/Fsmosqutio.jks')
+            storePassword 'anovatech'
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.config
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            ndk {
+                abiFilters "armeabi-v7a", "arm64-v8a"
+            }
+        }
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.config
+        }
+
+      /*  sourceSets {
+            main {
+                res.srcDirs = [
+                        'src/main/res/layouts/layouts_category2',
+                        'src/main/res/layouts',
+                        'src/main/res'
+                ]
+            }
+        }*/
+    }
+
+    flavorDimensions "dev"
+
+    productFlavors {
+
+        dev {
+            dimension "dev"
+            buildTypes.debug.minifyEnabled false
+            buildTypes.debug.shrinkResources false
+            applicationId "com.anova.fsmosquito"
+//            versionName project.ext.versionName
+//            versionCode project.ext.versionCode
+            resValue "string", "google_map_key", "sddfsfsdfsdfsd"
+            resValue "string", "app_name", "FS Mosquito"
+            buildConfigField "String", "BASE_URL", "\"http://google.com\""
+            buildConfigField "String", "IMAGE_URL", "\"http://google.com\""
+            buildConfigField "boolean", "SHOW_LOGS", "true"
+
+        }
+        applicationVariants.all { variant ->
+            variant.outputs.each { output ->
+                File aligned = output.outputFile
+                File[] allFiles = aligned.getParentFile().listFiles()
+                for (File file : allFiles) {
+                    if (file.getName().equals(aligned.getName()))
+                        continue
+                    file.delete()
+                }
+
+                def relativeRootDir = output.packageApplication.outputDirectory.toPath()
+                        .relativize(rootDir.toPath()).toFile()
+
+                output.outputFileName  = new File("$relativeRootDir/release",
+                        (aligned.name.replace("app-","FSMosquito-"))
+                                .replace(".apk", "-" +
+  //                             defaultConfig.versionName + "-"+
+                                getDateOfBuild()+".apk"))
+                println "deleting " + aligned.getName()
+                aligned.delete() //delete old file
+            }
+        }
+
+    }
+
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/ASL2.0'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/DEPENDENCIES'
+    }
+
+//set realse configs
+    def Properties props = new Properties()
+    def propFile = new File('signing.properties')
+    if (propFile.canRead()) {
+        props.load(new FileInputStream(propFile))
+
+        if (props != null && props.containsKey('STORE_FILE') && props.containsKey('STORE_PASSWORD') &&
+                props.containsKey('KEY_ALIAS') && props.containsKey('KEY_PASSWORD')) {
+            android.signingConfigs.playStoreConfig.storeFile = file(props['STORE_FILE'])
+            android.signingConfigs.playStoreConfig.storePassword = props['STORE_PASSWORD']
+            android.signingConfigs.playStoreConfig.keyAlias = props['KEY_ALIAS']
+            android.signingConfigs.playStoreConfig.keyPassword = props['KEY_PASSWORD']
+        } else {
+            println 'signing.properties found but some entries are missing'
+            android.buildTypes.playStoreConfig.signingConfig = null
+        }
+    } else {
+        println 'signing.properties not found'
+        android.buildTypes.playStoreConfig.signingConfig = null
+    }
+
+    configurations {
+    //    all*.exclude group: 'com.android.support', module: 'support-v4'
+      //  all*.exclude group: 'com.android.support', module: 'support-annotations'
+    }
+
+
+    sourceSets {
+        main {
+            res.srcDirs =
+                    [       'src/main/res/layouts/layouts_carrier',
+                            'src/main/res/layouts/layouts_telephone',
+                            'src/main/res/layouts/layouts_library',
+                            'src/main/res/layouts/layouts_checkin',
+                            'src/main/res/layouts/layouts_morningmeeting',
+                            'src/main/res/layouts/layouts_posopening',
+                            'src/main/res/layouts/layouts_performance',
+                            'src/main/res/layouts',
+                            'src/main/res'
+                    ]
+        }
+    }
+
+    buildToolsVersion '27.0.3'
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: '*.jar')
+    compile "com.android.support:appcompat-v7:$project.ext.supportLibraryVersion"
+    compile project(':baseframework')
+  //  implementation project(path: ":baseframework")
+    compile "com.android.support:design:27.1.1"
+    compile "com.android.support:cardview-v7:27.1.1"
+    testCompile 'junit:junit:4.12'
+
+    //    compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
+    //        transitive = true;
+    //    }
+    // debugCompile 'com.facebook.stetho:stetho:1.4.1'
+    //        compile 'com.facebook.stetho:stetho:1.4.1'
+    implementation 'com.google.firebase:firebase-core:16.0.3'
+    implementation "com.google.firebase:firebase-messaging:17.3.0"
+    // compile 'com.github.PhilJay:MPAndroidChart:v3.0.1'
+    //   compile project(':imagecrop')
+    //  implementation 'com.esri.arcgisruntime:arcgis-android:100.2.0'
+    // compile 'com.esri.arcgis.android:arcgis-android:10.2.9'
+    // compile 'com.esri.arcgisruntime:arcgis-android:100.1.0'
+    compile 'com.esri.arcgisruntime:arcgis-android:100.5.0'
+    compile 'com.android.support:multidex:1.0.3'
+    compile 'me.leolin:ShortcutBadger:1.1.21@aar'
+
+    /* compile 'id.zelory:compressor:1.0.4'*/
+    /*compile('com.crashlytics.sdk.android:crashlytics:2.7.1@aar') {
+            transitive = true;
+        }*/
+}
+
+apply plugin: 'com.google.gms.google-services'
